@@ -1,9 +1,13 @@
-import { Button } from "@/components/ui/button";
+"use client";
+import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Page = () => {
+  const trpc = useTRPC();
+  const { data } = useQuery(trpc.createAI.queryOptions({ text: "Div" }));
   return (
     <div className="flex h-screen w-screen items-center justify-center">
-      <Button variant="ghost">Click ME</Button>
+      {JSON.stringify(data)}
     </div>
   );
 };
