@@ -1,15 +1,8 @@
-"use client";
-import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { caller } from "@/trpc/server";
 
-const Page = () => {
-  const trpc = useTRPC();
-  const { data } = useQuery(trpc.createAI.queryOptions({ text: "Div" }));
-  return (
-    <div className="flex h-screen w-screen items-center justify-center">
-      {JSON.stringify(data)}
-    </div>
-  );
+const Page = async () => {
+  const data = await caller.createAI({ text: "Div" });
+  return <div>{JSON.stringify(data)}</div>;
 };
 
 export default Page;
