@@ -47,6 +47,10 @@ OpenAI
 Anthropic
 Grok
 
+Notes: AI provider
+OpenAI, gpt4.1, normal rate limit and resets faster
+Anthropic, claude-sonnet-3.5/4, strict rate limit and resets slower (typically 24 hrs+)
+
 #### AI Powered Tools and Reviews
 
 CodeRabbit
@@ -54,3 +58,5 @@ CodeRabbit
 #### Hosting
 
 Vercel
+
+
