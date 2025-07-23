@@ -60,3 +60,5 @@ Notes:
 npm run dev
 npx inngest-cli@1.8.0 dev 
 
+ If want to edit e2b.toml file, edit and run:
+ e2b template build
