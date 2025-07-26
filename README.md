@@ -63,5 +63,9 @@ npx inngest-cli@1.8.0 dev
  If want to edit e2b.toml file, edit and run:
  e2b template build
 
+Save changes to prisma schema:
+npx prisma migrate reset
+npx prisma migrate dev
+
  If want to view prisma db results,
  npx prisma studio
