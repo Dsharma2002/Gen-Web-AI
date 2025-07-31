@@ -6,8 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
+import { FC } from "react";
 
-export const ProjectsList = () => {
+export const ProjectsList: FC = () => {
   const trpc = useTRPC();
   const { user } = useUser();
   const { data: projects } = useQuery(trpc.projects.getMany.queryOptions());
