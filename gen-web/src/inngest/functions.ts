@@ -12,7 +12,7 @@ import { inngest } from "./client";
 import { Sandbox } from "@e2b/code-interpreter";
 import { getSandbox, lastAssisstantTextMessageContent } from "./utils";
 import { z } from "zod";
-import { PROMPT } from "@/prompt";
+import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from "@/prompt";
 import { prisma } from "@/lib/db";
 
 interface AgentState {
@@ -193,6 +193,52 @@ export const codeAgentFunction = inngest.createFunction(
 
     const result = await network.run(event.data.value, { state });
 
+    const fragmentTitleGenerator = createAgent<AgentState>({
+      name: "fragment-title-generator",
+      description: "An expert fragment title generator",
+      system: FRAGMENT_TITLE_PROMPT,
+      model: openai({
+        model: "gpt-4o",
+      }),
+    });
+
+    const responseGenerator = createAgent<AgentState>({
+      name: "response-generator",
+      description: "An expert response generator",
+      system: RESPONSE_PROMPT,
+      model: openai({
+        model: "gpt-4o",
+      }),
+    });
+
+    const { output: fragmentTitleOutput } = await fragmentTitleGenerator.run(
+      result.state.data.summary
+    );
+
+    const { output: responseOutput } = await responseGenerator.run(
+      result.state.data.summary
+    );
+
+    const generatedFragmentTitle = () => {
+      if (fragmentTitleOutput[0].type !== "text") {
+        return "Fragment";
+      } else if (Array.isArray(fragmentTitleOutput[0].content)) {
+        return fragmentTitleOutput[0].content.map((txt) => txt).join("");
+      } else {
+        return fragmentTitleOutput[0].content;
+      }
+    };
+
+    const generateResponse = () => {
+      if (responseOutput[0].type !== "text") {
+        return "Response";
+      } else if (Array.isArray(responseOutput[0].content)) {
+        return responseOutput[0].content.map((txt) => txt).join("");
+      } else {
+        return responseOutput[0].content;
+      }
+    };
+
     const isError =
       !result.state.data.summary ||
       Object.keys(result.state.data.files || {}).length === 0;
@@ -217,13 +263,13 @@ export const codeAgentFunction = inngest.createFunction(
       return await prisma.message.create({
         data: {
           projectId: event.data.projectId,
-          content: result.state.data.summary,
+          content: generateResponse(),
           role: "ASSISTANT",
           type: "RESULT",
           fragment: {
             create: {
               sandboxUrl: sandboxUrl,
-              title: "Fragment",
+              title: generatedFragmentTitle(),
               files: result.state.data.files,
             },
           },
