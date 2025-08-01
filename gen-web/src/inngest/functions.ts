@@ -4,6 +4,8 @@ import {
   createTool,
   createNetwork,
   type Tool,
+  type Message,
+  createState,
 } from "@inngest/agent-kit";
 
 import { inngest } from "./client";
@@ -15,7 +17,7 @@ import { prisma } from "@/lib/db";
 
 interface AgentState {
   summary: string;
-  files: {[path: string]: string};
+  files: { [path: string]: string };
 }
 
 export const codeAgentFunction = inngest.createFunction(
@@ -26,6 +28,41 @@ export const codeAgentFunction = inngest.createFunction(
       const sandbox = await Sandbox.create("gen-web-ds-test-2");
       return sandbox.sandboxId;
     });
+
+    const previousMessages = await step.run(
+      "get-previous-messages",
+      async () => {
+        const formattedMessages: Message[] = [];
+        const messages = await prisma.message.findMany({
+          where: {
+            projectId: event.data.projectId,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        for (const message of messages) {
+          formattedMessages.push({
+            type: "text",
+            role: message.role === "ASSISTANT" ? "assistant" : "user",
+            content: message.content,
+          });
+        }
+        return formattedMessages;
+      }
+    );
+
+    const state = createState<AgentState>(
+      {
+        summary: "",
+        files: {},
+      },
+      {
+        messages: previousMessages,
+      }
+    );
+
     const codeAgent = createAgent<AgentState>({
       name: "code-agent",
       description: "An expert code agent",
@@ -77,7 +114,10 @@ export const codeAgentFunction = inngest.createFunction(
               })
             ),
           }),
-          handler: async ({ files }, { step, network }: Tool.Options<AgentState>) => {
+          handler: async (
+            { files },
+            { step, network }: Tool.Options<AgentState>
+          ) => {
             const newFiles = await step?.run(
               "createOrUpdateFiles",
               async () => {
@@ -141,6 +181,7 @@ export const codeAgentFunction = inngest.createFunction(
       name: "coding-agent-network",
       agents: [codeAgent],
       maxIter: 15,
+      defaultState: state,
       router: async ({ network }) => {
         const summary = network.state.data.summary;
         if (summary) {
@@ -150,8 +191,7 @@ export const codeAgentFunction = inngest.createFunction(
       },
     });
 
-    // const { output } = await codeAgent.run(` Code: ${event.data.value}`);
-    const result = await network.run(event.data.value);
+    const result = await network.run(event.data.value, { state });
 
     const isError =
       !result.state.data.summary ||
